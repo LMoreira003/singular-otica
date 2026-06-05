@@ -50,6 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }, observerOptions);
 
     fadeElements.forEach(elem => {
+        if (elem.getBoundingClientRect().top < window.innerHeight) {
+            elem.classList.add("appear");
+        }
         entranceObserver.observe(elem);
     });
 
@@ -57,78 +60,78 @@ document.addEventListener("DOMContentLoaded", () => {
     const sectionElements = document.querySelectorAll(".section-tag, .section-title, .collection-card, .manifesto-item");
     sectionElements.forEach(el => {
         el.classList.add("fade-in");
+        if (el.getBoundingClientRect().top < window.innerHeight) {
+            el.classList.add("appear");
+        }
         entranceObserver.observe(el);
     });
 
 
     // ==========================================================================
-    // 5. LÓGICA DO SIMULADOR DE LENTES AUTOMATIZADO (AUTOPLAY LOOP - REALISTA)
+    // 5. LÓGICA DO SIMULADOR DE LENTES AUTOMATIZADO
     // ==========================================================================
     const lensStates = [
         {
             title: "Lente Padrão",
-            desc: "Lente de grau comum, sem tratamentos ou filtros adicionais.",
+            desc: "Uma base neutra para comparar nitidez, reflexos e conforto visual antes de aplicar tratamentos.",
             filterClass: "",
-            statusLabel: "Lente Padrão"
+            statusLabel: "Visão natural"
         },
         {
             title: "Filtro de Luz Azul",
-            desc: "Reduz o excesso de luz azul emitida por telas digitais, ajudando a diminuir a fadiga ocular no computador ou celular.",
+            desc: "Aquece levemente a imagem e ajuda a reduzir o incômodo de telas, mantendo a leitura confortável no dia a dia.",
             filterClass: "blue-filter",
-            statusLabel: "Filtro de Luz Azul Ativado"
+            statusLabel: "Mais conforto em telas"
         },
         {
             title: "Lente Polarizada",
-            desc: "Filtra reflexos intensos em superfícies horizontais, útil para dirigir em asfalto molhado ou diminuir o brilho da luz do sol.",
+            desc: "Corta reflexos fortes e deixa a cena mais definida, especialmente em direção, rua molhada e luz intensa.",
             filterClass: "polarized-filter",
-            statusLabel: "Lente Polarizada Ativada"
+            statusLabel: "Reflexos sob controle"
         },
         {
             title: "Lente Fotocromática",
-            desc: "Lentes que se adaptam à claridade do ambiente, escurecendo gradualmente quando expostas aos raios UV ao ar livre.",
+            desc: "Escurece a visão quando há muita claridade e volta ao natural em ambientes internos, sem trocar de armação.",
             filterClass: "photo-filter",
-            statusLabel: "Lente Fotocromática Ativada"
+            statusLabel: "Adaptação à luz"
         }
     ];
 
     let currentLensIndex = 0;
     let autoplayTimer = null;
-    const autoplayIntervalMs = 4500; // Tempo de exibição de cada lente
+    const autoplayIntervalMs = 1800; // Tempo de exibição de cada lente
+    const firstAutoplayDelayMs = 800;
 
-    const autoLensWindow = document.getElementById("auto-lens-window");
+    const lensWindows = document.querySelectorAll(".js-lens-window");
     const lensDisplayTitle = document.getElementById("lens-display-title");
     const lensDisplayDesc = document.getElementById("lens-display-desc");
     const lensStatusLabel = document.getElementById("lens-status-label");
     const indicatorDots = document.querySelectorAll("#lens-dots .dot");
 
     function updateLensSimulator(index) {
-        if (!autoLensWindow) return;
+        if (!lensWindows.length) return;
 
         currentLensIndex = index;
         const state = lensStates[index];
 
-        // 1. Atualizar as classes de filtro no vidro da lente
-        autoLensWindow.className = "lens-window"; // reseta
-        if (state.filterClass) {
-            autoLensWindow.classList.add(state.filterClass);
+        // 1. Atualizar as classes de filtro na visão dentro das lentes
+        lensWindows.forEach((lensWindow) => {
+            lensWindow.className = "lens-vision js-lens-window";
+            if (state.filterClass) {
+                lensWindow.classList.add(state.filterClass);
+            }
+        });
+
+        // 2. Atualizar textos junto com o filtro ativo
+        if (lensDisplayTitle) {
+            lensDisplayTitle.textContent = state.title;
         }
 
-        // 2. Atualizar textos com uma sutil animação de transição de opacidade
-        if (lensDisplayTitle && lensDisplayDesc) {
-            // Efeito fade-out rápido
-            lensDisplayTitle.style.opacity = "0.2";
-            lensDisplayDesc.style.opacity = "0.2";
-            
-            setTimeout(() => {
-                lensDisplayTitle.textContent = state.title;
-                lensDisplayDesc.textContent = state.desc;
-                lensStatusLabel.textContent = state.statusLabel;
-                
-                // Retorna opacidade
-                lensDisplayTitle.style.opacity = "1";
-                lensDisplayDesc.style.opacity = "1";
-            }, 250);
-        } else {
+        if (lensDisplayDesc) {
+            lensDisplayDesc.textContent = state.desc;
+        }
+
+        if (lensStatusLabel) {
             lensStatusLabel.textContent = state.statusLabel;
         }
 
@@ -142,30 +145,28 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function startAutoplay() {
+    function advanceLens() {
+        let nextIndex = (currentLensIndex + 1) % lensStates.length;
+        updateLensSimulator(nextIndex);
+        startAutoplay();
+    }
+
+    function startAutoplay(delay = autoplayIntervalMs) {
         stopAutoplay();
-        autoplayTimer = setInterval(() => {
-            let nextIndex = (currentLensIndex + 1) % lensStates.length;
-            updateLensSimulator(nextIndex);
-        }, autoplayIntervalMs);
+        autoplayTimer = setTimeout(advanceLens, delay);
     }
 
     function stopAutoplay() {
         if (autoplayTimer) {
-            clearInterval(autoplayTimer);
+            clearTimeout(autoplayTimer);
+            autoplayTimer = null;
         }
     }
 
     // Inicializa o simulador e inicia o autoplay
-    if (autoLensWindow) {
-        // Estilos CSS inline básicos para transições dos textos
-        if (lensDisplayTitle && lensDisplayDesc) {
-            lensDisplayTitle.style.transition = "opacity 0.25s ease";
-            lensDisplayDesc.style.transition = "opacity 0.25s ease";
-        }
-        
+    if (lensWindows.length) {
         updateLensSimulator(0);
-        startAutoplay();
+        startAutoplay(firstAutoplayDelayMs);
 
         // Permite ao usuário clicar nos pontinhos para inspecionar, resetando o timer
         indicatorDots.forEach((dot, idx) => {
